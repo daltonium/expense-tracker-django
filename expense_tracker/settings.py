@@ -87,7 +87,7 @@ DATABASES = {
         'HOST': config('DB_HOST'),      # 'localhost' for local dev
         'PORT': config('DB_PORT'),      # Default PostgreSQL port: 5432
     }
-
+}
 
 
 # Password validation
@@ -129,7 +129,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # After login, redirect here
 LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/login/
+LOGOUT_REDIRECT_URL = '/login/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
