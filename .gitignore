@@ -1,0 +1,85 @@
+# ─────────────────────────────
+# 🐍 Python
+# ─────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# ─────────────────────────────
+# 🔐 Environment variables
+# ─────────────────────────────
+.env
+.env.*
+*.env
+
+# ─────────────────────────────
+# 🗄️ Database
+# ─────────────────────────────
+*.sqlite3
+db.sqlite3
+
+# PostgreSQL dump files
+*.sql
+
+# ─────────────────────────────
+# 📦 Django
+# ─────────────────────────────
+*.log
+*.pot
+*.pyc
+
+# Django migrations (optional — usually KEEP them)
+# tracker/migrations/
+# */migrations/
+
+# Static & media (generated files)
+staticfiles/
+media/
+
+# Collected static files
+static/
+
+# ─────────────────────────────
+# 🧪 Testing & coverage
+# ─────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ─────────────────────────────
+# 🧠 IDEs & editors
+# ─────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─────────────────────────────
+# 🖥️ OS files
+# ─────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────
+# 📦 Build / packaging
+# ─────────────────────────────
+dist/
+build/
+*.egg-info/
+
+# ─────────────────────────────
+# 🔒 Secrets / keys
+# ─────────────────────────────
+*.pem
+*.key
+
+# ─────────────────────────────
+# 🐳 Docker (if you add later)
+# ─────────────────────────────
+*.log
+docker-compose.override.yml
