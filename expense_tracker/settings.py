@@ -135,3 +135,12 @@ LOGOUT_REDIRECT_URL = '/login/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Where to redirect if a user hits a @login_required view without being logged in
+LOGIN_URL = '/login/'
+
+# Where to redirect AFTER a successful login (if no 'next' param)
+LOGIN_REDIRECT_URL = '/dashboard/'
+
+# Where to redirect AFTER logout
+LOGOUT_REDIRECT_URL = '/login/'
