@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Environment variables
+.env
+.env.*
+*.env
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# VS Code / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Static & media (optional depending on setup)
+staticfiles/
+media/
+
+# Migrations (optional – keep if collaborating)
+# */migrations/
+# !*/migrations/__init__.py
+
+# PostgreSQL
+*.psql
+*.pgsql
+
+# Coverage / testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Node (if you later add frontend tooling)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Secrets
+secrets.json
+*.key
+*.pem
+
+# Docker (if used later)
+*.pid
+*.seed
+*.pid.lock
+
+# Celery / background tasks (if added later)
+celerybeat-schedule
+celerybeat.pid
