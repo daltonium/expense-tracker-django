@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from .models import Workspace, Expense, Income, BudgetRule
 import datetime
 import decimal
+from unittest.mock import patch, MagicMock
 
 
 # ─────────────────────────────────────────
@@ -354,3 +355,41 @@ class BudgetRuleTest(TestCase):
         )
         rule = BudgetRule.objects.get(workspace=self.ws)
         self.assertEqual(rule.needs_percent, decimal.Decimal('60'))
+        
+class ChatbotTest(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.user = make_user()
+        self.ws = make_workspace(self.user)
+        self.client.login(username='testuser', password='testpass123')
+
+    def test_chatbot_page_loads(self):
+        response = self.client.get(
+            reverse('chatbot', args=[self.ws.id])
+        )
+        self.assertEqual(response.status_code, 200)
+
+    @patch('core.views.cohere.ClientV2')
+    def test_chatbot_returns_response(self, mock_cohere_class):
+        # Mock the Cohere API so tests don't make real network calls
+        mock_client = MagicMock()
+        mock_cohere_class.return_value = mock_client
+
+        mock_message = MagicMock()
+        mock_message.message.content[0].text = 'You are doing great!'
+        mock_client.chat.return_value = mock_message
+
+        response = self.client.post(
+            reverse('chatbot', args=[self.ws.id]),
+            {'message': 'How am I doing this month?'}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'You are doing great!')
+
+    def test_chatbot_requires_login(self):
+        self.client.logout()
+        response = self.client.get(
+            reverse('chatbot', args=[self.ws.id])
+        )
+        self.assertIn('/login/', response.url)

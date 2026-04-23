@@ -2,12 +2,18 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+
 from django.db.models import Sum, Count, Avg
 from django.utils import timezone
+
 from .models import Workspace, Expense, Income, BudgetRule
 from .forms import ExpenseForm, IncomeForm, BudgetRuleForm
+
 import datetime
 import decimal
+
+import cohere
 
 def register(request):
     if request.method == 'POST':
@@ -258,4 +264,104 @@ def dashboard(request):
         'global_income': global_income,
         'monthly_expenses': monthly_expenses,
         'monthly_income': monthly_income,
+    })
+    
+
+@login_required
+def chatbot(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    response_text = None
+    user_message = None
+
+    if request.method == 'POST':
+        user_message = request.POST.get('message', '').strip()
+
+        if user_message:
+            # Build financial context from real database data
+            today = datetime.date.today()
+
+            monthly_income = Income.objects.filter(
+                workspace=workspace,
+                date__year=today.year,
+                date__month=today.month,
+            ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+            monthly_expenses = Expense.objects.filter(
+                workspace=workspace,
+                date__year=today.year,
+                date__month=today.month,
+            ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+            by_category = Expense.objects.filter(
+                workspace=workspace,
+                date__year=today.year,
+                date__month=today.month,
+            ).values('category').annotate(
+                total=Sum('amount')
+            ).order_by('-total')
+
+            savings = monthly_income - monthly_expenses
+            burn_rate = (
+                (monthly_expenses / monthly_income * 100)
+                if monthly_income > 0 else decimal.Decimal('0')
+            )
+
+            # Build the category breakdown string
+            category_lines = '\n'.join([
+                f"  - {row['category']}: ₹{row['total']}"
+                for row in by_category
+            ])
+
+            # The system prompt — defines the AI's persona
+            if workspace.mode == 'personal':
+                persona = (
+                    "You are a caring, empathetic personal finance advisor. "
+                    "If the user is overspending, gently guide them. "
+                    "If they are doing well, congratulate and encourage them. "
+                    "Keep responses concise, warm, and actionable."
+                )
+            else:
+                persona = (
+                    "You are a strategic AI CFO for a company. "
+                    "Analyze financial data professionally. "
+                    "Give precise, data-driven advice on cost control, "
+                    "revenue growth, and financial health. "
+                    "Keep responses concise and business-focused."
+                )
+
+            # Inject real financial data into the prompt
+            financial_context = f"""
+Current workspace: {workspace.name} ({workspace.mode} mode)
+This month's data:
+  - Income:   ₹{monthly_income}
+  - Expenses: ₹{monthly_expenses}
+  - Savings:  ₹{savings}
+  - Burn rate: {burn_rate:.1f}% of income spent
+
+Expense breakdown by category:
+{category_lines if category_lines else '  No expenses recorded yet.'}
+
+User's question: {user_message}
+"""
+
+            # Call the Cohere API
+            try:
+                co = cohere.ClientV2(api_key=settings.COHERE_API_KEY)
+                result = co.chat(
+                    model='command-r-plus',
+                    messages=[
+                        {'role': 'system', 'content': persona},
+                        {'role': 'user',   'content': financial_context},
+                    ]
+                )
+                response_text = result.message.content[0].text
+
+            except Exception as e:
+                response_text = f"Sorry, I couldn't connect right now. Please try again. (Error: {e})"
+
+    return render(request, 'core/chatbot.html', {
+        'workspace': workspace,
+        'user_message': user_message,
+        'response_text': response_text,
     })

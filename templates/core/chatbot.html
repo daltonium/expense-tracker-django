@@ -1,0 +1,7 @@
+<!DOCTYPE html><html><body>
+<form method="post">{% csrf_token %}
+<input name="message" placeholder="Ask something...">
+<button type="submit">Send</button>
+</form>
+{% if response_text %}<p>{{ response_text }}</p>{% endif %}
+</body></html>

@@ -13,4 +13,5 @@ urlpatterns = [
     path('workspace/<int:workspace_id>/income/add/', views.income_create, name='income_create'),
     path('workspace/<int:workspace_id>/analytics/', views.analytics, name='analytics'),
     path('workspace/<int:workspace_id>/strategy/', views.strategy, name='strategy'),
+    path('workspace/<int:workspace_id>/chatbot/', views.chatbot, name='chatbot'),
 ]
