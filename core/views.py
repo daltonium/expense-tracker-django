@@ -4,9 +4,10 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Avg
 from django.utils import timezone
-from .models import Workspace, Expense
-from .forms import ExpenseForm
+from .models import Workspace, Expense, Income, BudgetRule
+from .forms import ExpenseForm, IncomeForm, BudgetRuleForm
 import datetime
+import decimal
 
 def register(request):
     if request.method == 'POST':
@@ -134,4 +135,79 @@ def analytics(request, workspace_id):
         'total_this_month': total_this_month,
         'by_category': by_category,
         'monthly_totals': monthly_totals,
+    })
+
+@login_required
+def strategy(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    # Get or create the budget rule for this workspace
+    budget_rule, created = BudgetRule.objects.get_or_create(
+        workspace=workspace,
+        defaults={'needs_percent': 50, 'wants_percent': 30, 'savings_percent': 20}
+    )
+
+    if request.method == 'POST':
+        form = BudgetRuleForm(request.POST, instance=budget_rule)
+        if form.is_valid():
+            form.save()
+            return redirect('strategy', workspace_id=workspace.id)
+    else:
+        form = BudgetRuleForm(instance=budget_rule)
+
+    # Calculate this month's income and expenses
+    today = datetime.date.today()
+
+    monthly_income = Income.objects.filter(
+        workspace=workspace,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    monthly_expenses = Expense.objects.filter(
+        workspace=workspace,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    # 50/30/20 allocations based on actual income
+    needs_target    = monthly_income * (budget_rule.needs_percent   / 100)
+    wants_target    = monthly_income * (budget_rule.wants_percent   / 100)
+    savings_target  = monthly_income * (budget_rule.savings_percent / 100)
+
+    # Burn rate: what % of income is being spent
+    burn_rate = (
+        (monthly_expenses / monthly_income * 100)
+        if monthly_income > 0 else decimal.Decimal('0')
+    )
+
+    return render(request, 'core/strategy.html', {
+        'workspace': workspace,
+        'form': form,
+        'monthly_income': monthly_income,
+        'monthly_expenses': monthly_expenses,
+        'needs_target': needs_target,
+        'wants_target': wants_target,
+        'savings_target': savings_target,
+        'burn_rate': burn_rate,
+        'savings_actual': monthly_income - monthly_expenses,
+    })
+
+@login_required
+def income_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    if request.method == 'POST':
+        form = IncomeForm(request.POST)
+        if form.is_valid():
+            income = form.save(commit=False)
+            income.workspace = workspace
+            income.save()
+            return redirect('strategy', workspace_id=workspace.id)
+    else:
+        form = IncomeForm()
+
+    return render(request, 'core/income_create.html', {
+        'workspace': workspace,
+        'form': form,
     })
