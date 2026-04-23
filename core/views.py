@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from .models import Workspace
+from .models import Workspace, Expense
 
 def register(request):
     if request.method == 'POST':
@@ -36,6 +36,10 @@ def home(request):
 
 @login_required
 def home(request):
+    return render(request, 'core/home.html', {})
+
+@login_required
+def home(request):
     workspaces = Workspace.objects.filter(user=request.user)
     return render(request, 'core/home.html', {'workspaces': workspaces})
 
@@ -54,3 +58,41 @@ def select_mode(request):
             return redirect('home')
 
     return render(request, 'core/select_mode.html', {})
+
+@login_required
+def expense_list(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+    expenses = Expense.objects.filter(workspace=workspace).order_by('-date')
+    total = sum(e.amount for e in expenses)
+    return render(request, 'core/expense_list.html', {
+        'workspace': workspace,
+        'expenses': expenses,
+        'total': total,
+    })
+
+@login_required
+def expense_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        amount = request.POST.get('amount')
+        category = request.POST.get('category')
+        date = request.POST.get('date')
+        note = request.POST.get('note', '')
+
+        Expense.objects.create(
+            workspace=workspace,
+            title=title,
+            amount=amount,
+            category=category,
+            date=date,
+            note=note,
+        )
+        return redirect('expense_list', workspace_id=workspace.id)
+
+    return render(request, 'core/expense_create.html', {
+        'workspace': workspace,
+        'categories': Expense.CATEGORY_CHOICES,
+    })
+    

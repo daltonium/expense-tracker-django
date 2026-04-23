@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import Workspace, Expense
 
-# Register your models here.
+admin.site.register(Workspace)
+admin.site.register(Expense)
