@@ -7,8 +7,8 @@ from django.conf import settings
 from django.db.models import Sum, Count, Avg
 from django.utils import timezone
 
-from .models import Workspace, Expense, Income, BudgetRule
-from .forms import ExpenseForm, IncomeForm, BudgetRuleForm
+from .models import Workspace, Expense, Income, BudgetRule, Investment
+from .forms import ExpenseForm, IncomeForm, BudgetRuleForm, InvestmentForm
 
 import datetime
 import decimal
@@ -365,3 +365,111 @@ User's question: {user_message}
         'user_message': user_message,
         'response_text': response_text,
     })
+
+@login_required
+def grow(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    investments = Investment.objects.filter(
+        workspace=workspace
+    ).order_by('-date_invested')
+
+    # Portfolio summary
+    totals = investments.aggregate(
+        total_invested=Sum('amount_invested'),
+        total_current=Sum('current_value'),
+    )
+
+    total_invested = totals['total_invested'] or decimal.Decimal('0')
+    total_current  = totals['total_current']  or decimal.Decimal('0')
+    total_returns  = total_current - total_invested
+    portfolio_return_pct = (
+        (total_returns / total_invested * 100)
+        if total_invested > 0 else decimal.Decimal('0')
+    )
+
+    # Breakdown by asset type
+    by_asset = investments.values('asset_type').annotate(
+        invested=Sum('amount_invested'),
+        current=Sum('current_value'),
+    ).order_by('-current')
+
+    return render(request, 'core/grow.html', {
+        'workspace': workspace,
+        'investments': investments,
+        'total_invested': total_invested,
+        'total_current': total_current,
+        'total_returns': total_returns,
+        'portfolio_return_pct': portfolio_return_pct,
+        'by_asset': by_asset,
+    })
+
+
+@login_required
+def investment_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    if request.method == 'POST':
+        form = InvestmentForm(request.POST)
+        if form.is_valid():
+            investment = form.save(commit=False)
+            investment.workspace = workspace
+            investment.save()
+            return redirect('grow', workspace_id=workspace.id)
+    else:
+        form = InvestmentForm()
+
+    return render(request, 'core/investment_create.html', {
+        'workspace': workspace,
+        'form': form,
+    })
+
+
+@login_required
+def investment_update(request, workspace_id, investment_id):
+    workspace  = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+    investment = get_object_or_404(Investment, id=investment_id, workspace=workspace)
+
+    if request.method == 'POST':
+        form = InvestmentForm(request.POST, instance=investment)
+        if form.is_valid():
+            form.save()
+            return redirect('grow', workspace_id=workspace.id)
+    else:
+        form = InvestmentForm(instance=investment)
+
+    return render(request, 'core/investment_create.html', {
+        'workspace': workspace,
+        'form': form,
+        'investment': investment,
+    })
+
+@login_required
+def dashboard(request):
+    today = datetime.date.today()
+
+    workspaces = Workspace.objects.filter(
+        user=request.user
+    ).annotate(
+        total_expenses=Sum('expense__amount'),
+        total_income=Sum('income__amount'),
+        total_invested=Sum('investment__amount_invested'),
+        total_portfolio=Sum('investment__current_value'),
+    )
+
+    global_totals = Workspace.objects.filter(
+        user=request.user
+    ).aggregate(
+        total_expenses=Sum('expense__amount'),
+        total_income=Sum('income__amount'),
+        total_invested=Sum('investment__amount_invested'),
+        total_portfolio=Sum('investment__current_value'),
+    )
+
+    global_expenses  = global_totals['total_expenses']  or decimal.Decimal('0')
+    global_income    = global_totals['total_income']    or decimal.Decimal('0')
+    total_invested   = global_totals['total_invested']  or decimal.Decimal('0')
+    total_portfolio  = global_totals['total_portfolio'] or decimal.Decimal('0')
+    net_worth        = global_income - global_expenses + total_portfolio
+
+    # rest of the view stays the same...

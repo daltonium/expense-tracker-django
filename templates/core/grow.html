@@ -1,0 +1,7 @@
+<!-- grow.html -->
+<!DOCTYPE html><html><body>
+<p>Invested: {{ total_invested }}</p>
+<p>Current: {{ total_current }}</p>
+<p>Returns: {{ total_returns }}</p>
+{% for inv in investments %}<p>{{ inv.name }} – {{ inv.returns }}</p>{% endfor %}
+</body></html>

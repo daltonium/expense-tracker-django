@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Workspace, Expense, Income, BudgetRule
+from .models import Workspace, Expense, Income, BudgetRule, Investment
 
 @admin.register(Workspace)
 class WorkspaceAdmin(admin.ModelAdmin):
@@ -18,3 +18,8 @@ class IncomeAdmin(admin.ModelAdmin):
 @admin.register(BudgetRule)
 class BudgetRuleAdmin(admin.ModelAdmin):
     list_display = ['workspace', 'needs_percent', 'wants_percent', 'savings_percent']
+
+@admin.register(Investment)
+class InvestmentAdmin(admin.ModelAdmin):
+    list_display = ['name', 'asset_type', 'amount_invested', 'current_value', 'status', 'workspace']
+    list_filter  = ['asset_type', 'status']

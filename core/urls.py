@@ -14,4 +14,7 @@ urlpatterns = [
     path('workspace/<int:workspace_id>/analytics/', views.analytics, name='analytics'),
     path('workspace/<int:workspace_id>/strategy/', views.strategy, name='strategy'),
     path('workspace/<int:workspace_id>/chatbot/', views.chatbot, name='chatbot'),
+    path('workspace/<int:workspace_id>/grow/', views.grow, name='grow'),
+    path('workspace/<int:workspace_id>/grow/add/', views.investment_create, name='investment_create'),
+    path('workspace/<int:workspace_id>/grow/<int:investment_id>/edit/', views.investment_update, name='investment_update'),
 ]

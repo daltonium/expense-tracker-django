@@ -1,5 +1,5 @@
 from django import forms
-from .models import Expense, Income, BudgetRule
+from .models import Expense, Income, BudgetRule, Investment
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
@@ -27,4 +27,24 @@ class BudgetRuleForm(forms.ModelForm):
                 "Percentages must add up to 100. "
                 f"Current total: {needs + wants + savings}"
             )
+        return cleaned_data
+    
+class InvestmentForm(forms.ModelForm):
+    class Meta:
+        model = Investment
+        fields = [
+            'name', 'asset_type', 'amount_invested',
+            'current_value', 'date_invested', 'status', 'note'
+        ]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        amount = cleaned_data.get('amount_invested')
+        current = cleaned_data.get('current_value')
+
+        if amount and current:
+            if amount <= 0:
+                raise forms.ValidationError(
+                    "Amount invested must be greater than zero."
+                )
         return cleaned_data

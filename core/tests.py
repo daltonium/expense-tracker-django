@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import Workspace, Expense, Income, BudgetRule
+from .models import Workspace, Expense, Income, BudgetRule, Investment
 import datetime
 import decimal
 from unittest.mock import patch, MagicMock
@@ -393,3 +393,43 @@ class ChatbotTest(TestCase):
             reverse('chatbot', args=[self.ws.id])
         )
         self.assertIn('/login/', response.url)
+
+class InvestmentTest(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.user = make_user()
+        self.ws = make_workspace(self.user)
+        self.client.login(username='testuser', password='testpass123')
+
+    def test_grow_page_loads(self):
+        response = self.client.get(reverse('grow', args=[self.ws.id]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_create_investment(self):
+        self.client.post(reverse('investment_create', args=[self.ws.id]), {
+            'name': 'Nifty 50 Index Fund',
+            'asset_type': 'mutual_fund',
+            'amount_invested': '50000.00',
+            'current_value': '58000.00',
+            'date_invested': '2025-01-01',
+            'status': 'active',
+            'note': '',
+        })
+        self.assertTrue(
+            Investment.objects.filter(name='Nifty 50 Index Fund').exists()
+        )
+
+    def test_returns_property(self):
+        inv = Investment.objects.create(
+            workspace=self.ws,
+            name='Test Stock',
+            asset_type='stocks',
+            amount_invested=decimal.Decimal('10000'),
+            current_value=decimal.Decimal('12500'),
+            date_invested=datetime.date.today(),
+            status='active',
+        )
+        self.assertEqual(inv.returns, decimal.Decimal('2500'))
+        self.assertEqual(inv.returns_percent, decimal.Decimal('25'))
+        self.assertTrue(inv.is_profitable)
