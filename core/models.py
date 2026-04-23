@@ -15,7 +15,7 @@ class Workspace(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.name} ({self.mode})"
+        return f"{self.name} ({self.mode})" 
     
 class Expense(models.Model):
     CATEGORY_CHOICES = [
@@ -113,4 +113,4 @@ class Investment(models.Model):
         return self.returns > 0
 
     def __str__(self):
-        return f"{self.name} – ₹{self.current_value}"
+        return f"{self.name} – ₹{self.current_value:.2f}"

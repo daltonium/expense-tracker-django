@@ -15,16 +15,28 @@ import decimal
 
 import cohere
 
+
+# ─────────────────────────────────────────
+# AUTH VIEWS
+# ─────────────────────────────────────────
+
+def home(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return render(request, 'core/home.html', {})
+
+
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('select_mode')  # ← new users should create a workspace first
+            return redirect('select_mode')
     else:
         form = UserCreationForm()
     return render(request, 'core/register.html', {'form': form})
+
 
 def user_login(request):
     if request.method == 'POST':
@@ -33,193 +45,40 @@ def user_login(request):
         user = authenticate(request, username=username, password=password)
         if user:
             login(request, user)
-            return redirect('dashboard')   # ← change 'home' to 'dashboard'
+            return redirect('dashboard')
         else:
             return render(request, 'core/login.html', {'error': 'Invalid credentials'})
     return render(request, 'core/login.html', {})
+
 
 def user_logout(request):
     logout(request)
     return redirect('login')
 
-def home(request):
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    return render(request, 'core/home.html', {})
 
-@login_required
-def home(request):
-    return render(request, 'core/home.html', {})
-
-@login_required
-def home(request):
-    workspaces = Workspace.objects.filter(
-        user=request.user
-    ).annotate(
-        total_spent=Sum('expense__amount')
-    )
-    return render(request, 'core/home.html', {'workspaces': workspaces})
+# ─────────────────────────────────────────
+# WORKSPACE SETUP
+# ─────────────────────────────────────────
 
 @login_required
 def select_mode(request):
     if request.method == 'POST':
         mode = request.POST.get('mode')
         name = request.POST.get('name')
-
         if mode in ['personal', 'company'] and name:
             Workspace.objects.create(
                 user=request.user,
                 name=name,
                 mode=mode
             )
-            return redirect('home')
-
+            return redirect('dashboard')
     return render(request, 'core/select_mode.html', {})
 
-@login_required
-def expense_list(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-    expenses = Expense.objects.filter(workspace=workspace).order_by('-date')
-    total = sum(e.amount for e in expenses)
-    return render(request, 'core/expense_list.html', {
-        'workspace': workspace,
-        'expenses': expenses,
-        'total': total,
-    })
 
-@login_required
-def expense_create(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+# ─────────────────────────────────────────
+# DASHBOARD
+# ─────────────────────────────────────────
 
-    if request.method == 'POST':
-        form = ExpenseForm(request.POST)
-        if form.is_valid():
-            expense = form.save(commit=False)
-            expense.workspace = workspace
-            expense.save()
-            return redirect('expense_list', workspace_id=workspace.id)
-    else:
-        form = ExpenseForm()
-
-    return render(request, 'core/expense_create.html', {
-        'workspace': workspace,
-        'form': form,
-    })
-    
-@login_required
-def analytics(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-
-    # --- Total spending all time ---
-    total_all_time = Expense.objects.filter(
-        workspace=workspace
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    # --- This month's spending ---
-    today = datetime.date.today()
-    total_this_month = Expense.objects.filter(
-        workspace=workspace,
-        date__year=today.year,
-        date__month=today.month,
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    # --- Spending by category ---
-    by_category = Expense.objects.filter(
-        workspace=workspace
-    ).values('category').annotate(
-        total=Sum('amount')
-    ).order_by('-total')
-
-    # --- Monthly totals (last 6 months) ---
-    monthly_totals = Expense.objects.filter(
-        workspace=workspace
-    ).values('date__year', 'date__month').annotate(
-        total=Sum('amount')
-    ).order_by('date__year', 'date__month')
-
-    return render(request, 'core/analytics.html', {
-        'workspace': workspace,
-        'total_all_time': total_all_time,
-        'total_this_month': total_this_month,
-        'by_category': by_category,
-        'monthly_totals': monthly_totals,
-    })
-
-@login_required
-def strategy(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-
-    # Get or create the budget rule for this workspace
-    budget_rule, created = BudgetRule.objects.get_or_create(
-        workspace=workspace,
-        defaults={'needs_percent': 50, 'wants_percent': 30, 'savings_percent': 20}
-    )
-
-    if request.method == 'POST':
-        form = BudgetRuleForm(request.POST, instance=budget_rule)
-        if form.is_valid():
-            form.save()
-            return redirect('strategy', workspace_id=workspace.id)
-    else:
-        form = BudgetRuleForm(instance=budget_rule)
-
-    # Calculate this month's income and expenses
-    today = datetime.date.today()
-
-    monthly_income = Income.objects.filter(
-        workspace=workspace,
-        date__year=today.year,
-        date__month=today.month,
-    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
-
-    monthly_expenses = Expense.objects.filter(
-        workspace=workspace,
-        date__year=today.year,
-        date__month=today.month,
-    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
-
-    # 50/30/20 allocations based on actual income
-    needs_target   = monthly_income * (budget_rule.needs_percent / decimal.Decimal(100))
-    wants_target   = monthly_income * (budget_rule.wants_percent / decimal.Decimal(100))
-    savings_target = monthly_income * (budget_rule.savings_percent / decimal.Decimal(100))
-
-    # Burn rate: what % of income is being spent
-    burn_rate = (
-        (monthly_expenses / monthly_income * 100)
-        if monthly_income > 0 else decimal.Decimal('0')
-    )
-
-    return render(request, 'core/strategy.html', {
-        'workspace': workspace,
-        'form': form,
-        'monthly_income': monthly_income,
-        'monthly_expenses': monthly_expenses,
-        'needs_target': needs_target,
-        'wants_target': wants_target,
-        'savings_target': savings_target,
-        'burn_rate': burn_rate,
-        'savings_actual': monthly_income - monthly_expenses,
-    })
-
-@login_required
-def income_create(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-
-    if request.method == 'POST':
-        form = IncomeForm(request.POST)
-        if form.is_valid():
-            income = form.save(commit=False)
-            income.workspace = workspace
-            income.save()
-            return redirect('strategy', workspace_id=workspace.id)
-    else:
-        form = IncomeForm()
-
-    return render(request, 'core/income_create.html', {
-        'workspace': workspace,
-        'form': form,
-    })
-    
 @login_required
 def dashboard(request):
     today = datetime.date.today()
@@ -242,8 +101,8 @@ def dashboard(request):
         total_portfolio=Sum('investment__current_value'),
     )
 
-    global_expenses = global_totals['total_expenses']  or decimal.Decimal('0')
-    global_income   = global_totals['total_income']    or decimal.Decimal('0')
+    global_expenses = global_totals['total_expenses'] or decimal.Decimal('0')
+    global_income   = global_totals['total_income']   or decimal.Decimal('0')
     total_invested  = global_totals['total_invested']  or decimal.Decimal('0')
     total_portfolio = global_totals['total_portfolio'] or decimal.Decimal('0')
     net_worth       = global_income - global_expenses + total_portfolio
@@ -260,7 +119,7 @@ def dashboard(request):
         date__month=today.month,
     ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
 
-    return render(request, 'core/dashboard.html', {   # ← must always be reached
+    return render(request, 'core/dashboard.html', {
         'workspaces': workspaces,
         'net_worth': net_worth,
         'global_expenses': global_expenses,
@@ -270,18 +129,263 @@ def dashboard(request):
         'total_portfolio': total_portfolio,
     })
 
+
+# ─────────────────────────────────────────
+# EXPENSES
+# ─────────────────────────────────────────
+
 @login_required
-def chatbot(request, workspace_id):
+def expense_list(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+    expenses  = Expense.objects.filter(workspace=workspace).order_by('-date')
+    total     = expenses.aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+    return render(request, 'core/expense_list.html', {
+        'workspace': workspace,
+        'expenses':  expenses,
+        'total':     total,
+    })
+
+
+@login_required
+def expense_create(request, workspace_id):
     workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
 
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            expense           = form.save(commit=False)
+            expense.workspace = workspace
+            expense.save()
+            return redirect('expense_list', workspace_id=workspace.id)
+    else:
+        form = ExpenseForm()
+
+    return render(request, 'core/expense_create.html', {
+        'workspace': workspace,
+        'form':      form,
+    })
+
+
+# ─────────────────────────────────────────
+# INCOME
+# ─────────────────────────────────────────
+
+@login_required
+def income_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    if request.method == 'POST':
+        form = IncomeForm(request.POST)
+        if form.is_valid():
+            income           = form.save(commit=False)
+            income.workspace = workspace
+            income.save()
+            return redirect('strategy', workspace_id=workspace.id)
+    else:
+        form = IncomeForm()
+
+    return render(request, 'core/income_create.html', {
+        'workspace': workspace,
+        'form':      form,
+    })
+
+
+# ─────────────────────────────────────────
+# ANALYTICS
+# ─────────────────────────────────────────
+
+@login_required
+def analytics(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+    today     = datetime.date.today()
+
+    total_all_time = Expense.objects.filter(
+        workspace=workspace
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    total_this_month = Expense.objects.filter(
+        workspace=workspace,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    by_category = Expense.objects.filter(
+        workspace=workspace
+    ).values('category').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+
+    monthly_totals = Expense.objects.filter(
+        workspace=workspace
+    ).values('date__year', 'date__month').annotate(
+        total=Sum('amount')
+    ).order_by('date__year', 'date__month')
+
+    return render(request, 'core/analytics.html', {
+        'workspace':       workspace,
+        'total_all_time':  total_all_time,
+        'total_this_month': total_this_month,
+        'by_category':     by_category,
+        'monthly_totals':  monthly_totals,
+    })
+
+
+# ─────────────────────────────────────────
+# STRATEGY (50/30/20)
+# ─────────────────────────────────────────
+
+@login_required
+def strategy(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    budget_rule, _ = BudgetRule.objects.get_or_create(
+        workspace=workspace,
+        defaults={
+            'needs_percent':   50,
+            'wants_percent':   30,
+            'savings_percent': 20,
+        }
+    )
+
+    if request.method == 'POST':
+        form = BudgetRuleForm(request.POST, instance=budget_rule)
+        if form.is_valid():
+            form.save()
+            return redirect('strategy', workspace_id=workspace.id)
+    else:
+        form = BudgetRuleForm(instance=budget_rule)
+
+    today = datetime.date.today()
+
+    monthly_income = Income.objects.filter(
+        workspace=workspace,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    monthly_expenses = Expense.objects.filter(
+        workspace=workspace,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    needs_target   = monthly_income * (budget_rule.needs_percent   / decimal.Decimal(100))
+    wants_target   = monthly_income * (budget_rule.wants_percent   / decimal.Decimal(100))
+    savings_target = monthly_income * (budget_rule.savings_percent / decimal.Decimal(100))
+
+    burn_rate = (
+        (monthly_expenses / monthly_income * 100)
+        if monthly_income > 0 else decimal.Decimal('0')
+    )
+
+    return render(request, 'core/strategy.html', {
+        'workspace':        workspace,
+        'form':             form,
+        'monthly_income':   monthly_income,
+        'monthly_expenses': monthly_expenses,
+        'needs_target':     needs_target,
+        'wants_target':     wants_target,
+        'savings_target':   savings_target,
+        'burn_rate':        burn_rate,
+        'savings_actual':   monthly_income - monthly_expenses,
+    })
+
+
+# ─────────────────────────────────────────
+# GROW (INVESTMENTS)
+# ─────────────────────────────────────────
+
+@login_required
+def grow(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    investments = Investment.objects.filter(
+        workspace=workspace
+    ).order_by('-date_invested')
+
+    totals = investments.aggregate(
+        total_invested=Sum('amount_invested'),
+        total_current=Sum('current_value'),
+    )
+
+    total_invested       = totals['total_invested'] or decimal.Decimal('0')
+    total_current        = totals['total_current']  or decimal.Decimal('0')
+    total_returns        = total_current - total_invested
+    portfolio_return_pct = (
+        (total_returns / total_invested * 100)
+        if total_invested > 0 else decimal.Decimal('0')
+    )
+
+    by_asset = investments.values('asset_type').annotate(
+        invested=Sum('amount_invested'),
+        current=Sum('current_value'),
+    ).order_by('-current')
+
+    return render(request, 'core/grow.html', {
+        'workspace':           workspace,
+        'investments':         investments,
+        'total_invested':      total_invested,
+        'total_current':       total_current,
+        'total_returns':       total_returns,
+        'portfolio_return_pct': portfolio_return_pct,
+        'by_asset':            by_asset,
+    })
+
+
+@login_required
+def investment_create(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    if request.method == 'POST':
+        form = InvestmentForm(request.POST)
+        if form.is_valid():
+            investment           = form.save(commit=False)
+            investment.workspace = workspace
+            investment.save()
+            return redirect('grow', workspace_id=workspace.id)
+    else:
+        form = InvestmentForm()
+
+    return render(request, 'core/investment_create.html', {
+        'workspace': workspace,
+        'form':      form,
+    })
+
+
+@login_required
+def investment_update(request, workspace_id, investment_id):
+    workspace  = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+    investment = get_object_or_404(Investment, id=investment_id, workspace=workspace)
+
+    if request.method == 'POST':
+        form = InvestmentForm(request.POST, instance=investment)
+        if form.is_valid():
+            form.save()
+            return redirect('grow', workspace_id=workspace.id)
+    else:
+        form = InvestmentForm(instance=investment)
+
+    return render(request, 'core/investment_create.html', {
+        'workspace':  workspace,
+        'form':       form,
+        'investment': investment,
+    })
+
+
+# ─────────────────────────────────────────
+# AI CHATBOT
+# ─────────────────────────────────────────
+
+@login_required
+def chatbot(request, workspace_id):
+    workspace     = get_object_or_404(Workspace, id=workspace_id, user=request.user)
     response_text = None
-    user_message = None
+    user_message  = None
 
     if request.method == 'POST':
         user_message = request.POST.get('message', '').strip()
 
         if user_message:
-            # Build financial context from real database data
             today = datetime.date.today()
 
             monthly_income = Income.objects.filter(
@@ -304,19 +408,17 @@ def chatbot(request, workspace_id):
                 total=Sum('amount')
             ).order_by('-total')
 
-            savings = monthly_income - monthly_expenses
+            savings   = monthly_income - monthly_expenses
             burn_rate = (
                 (monthly_expenses / monthly_income * 100)
                 if monthly_income > 0 else decimal.Decimal('0')
             )
 
-            # Build the category breakdown string
             category_lines = '\n'.join([
                 f"  - {row['category']}: ₹{row['total']}"
                 for row in by_category
             ])
 
-            # The system prompt — defines the AI's persona
             if workspace.mode == 'personal':
                 persona = (
                     "You are a caring, empathetic personal finance advisor. "
@@ -333,13 +435,12 @@ def chatbot(request, workspace_id):
                     "Keep responses concise and business-focused."
                 )
 
-            # Inject real financial data into the prompt
             financial_context = f"""
 Current workspace: {workspace.name} ({workspace.mode} mode)
 This month's data:
-  - Income:   ₹{monthly_income}
-  - Expenses: ₹{monthly_expenses}
-  - Savings:  ₹{savings}
+  - Income:    ₹{monthly_income}
+  - Expenses:  ₹{monthly_expenses}
+  - Savings:   ₹{savings}
   - Burn rate: {burn_rate:.1f}% of income spent
 
 Expense breakdown by category:
@@ -348,9 +449,8 @@ Expense breakdown by category:
 User's question: {user_message}
 """
 
-            # Call the Cohere API
             try:
-                co = cohere.ClientV2(api_key=settings.COHERE_API_KEY)
+                co     = cohere.ClientV2(api_key=settings.COHERE_API_KEY)
                 result = co.chat(
                     model='command-r-plus',
                     messages=[
@@ -364,115 +464,7 @@ User's question: {user_message}
                 response_text = f"Sorry, I couldn't connect right now. Please try again. (Error: {e})"
 
     return render(request, 'core/chatbot.html', {
-        'workspace': workspace,
+        'workspace':    workspace,
         'user_message': user_message,
         'response_text': response_text,
     })
-
-@login_required
-def grow(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-
-    investments = Investment.objects.filter(
-        workspace=workspace
-    ).order_by('-date_invested')
-
-    # Portfolio summary
-    totals = investments.aggregate(
-        total_invested=Sum('amount_invested'),
-        total_current=Sum('current_value'),
-    )
-
-    total_invested = totals['total_invested'] or decimal.Decimal('0')
-    total_current  = totals['total_current']  or decimal.Decimal('0')
-    total_returns  = total_current - total_invested
-    portfolio_return_pct = (
-        (total_returns / total_invested * 100)
-        if total_invested > 0 else decimal.Decimal('0')
-    )
-
-    # Breakdown by asset type
-    by_asset = investments.values('asset_type').annotate(
-        invested=Sum('amount_invested'),
-        current=Sum('current_value'),
-    ).order_by('-current')
-
-    return render(request, 'core/grow.html', {
-        'workspace': workspace,
-        'investments': investments,
-        'total_invested': total_invested,
-        'total_current': total_current,
-        'total_returns': total_returns,
-        'portfolio_return_pct': portfolio_return_pct,
-        'by_asset': by_asset,
-    })
-
-
-@login_required
-def investment_create(request, workspace_id):
-    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-
-    if request.method == 'POST':
-        form = InvestmentForm(request.POST)
-        if form.is_valid():
-            investment = form.save(commit=False)
-            investment.workspace = workspace
-            investment.save()
-            return redirect('grow', workspace_id=workspace.id)
-    else:
-        form = InvestmentForm()
-
-    return render(request, 'core/investment_create.html', {
-        'workspace': workspace,
-        'form': form,
-    })
-
-
-@login_required
-def investment_update(request, workspace_id, investment_id):
-    workspace  = get_object_or_404(Workspace, id=workspace_id, user=request.user)
-    investment = get_object_or_404(Investment, id=investment_id, workspace=workspace)
-
-    if request.method == 'POST':
-        form = InvestmentForm(request.POST, instance=investment)
-        if form.is_valid():
-            form.save()
-            return redirect('grow', workspace_id=workspace.id)
-    else:
-        form = InvestmentForm(instance=investment)
-
-    return render(request, 'core/investment_create.html', {
-        'workspace': workspace,
-        'form': form,
-        'investment': investment,
-    })
-
-@login_required
-def dashboard(request):
-    today = datetime.date.today()
-
-    workspaces = Workspace.objects.filter(
-        user=request.user
-    ).annotate(
-        total_expenses=Sum('expense__amount'),
-        total_income=Sum('income__amount'),
-        total_invested=Sum('investment__amount_invested'),
-        total_portfolio=Sum('investment__current_value'),
-    )
-
-    global_totals = Workspace.objects.filter(
-        user=request.user
-    ).aggregate(
-        total_expenses=Sum('expense__amount'),
-        total_income=Sum('income__amount'),
-        total_invested=Sum('investment__amount_invested'),
-        total_portfolio=Sum('investment__current_value'),
-    )
-
-    global_expenses  = global_totals['total_expenses']  or decimal.Decimal('0')
-    global_income    = global_totals['total_income']    or decimal.Decimal('0')
-    total_invested   = global_totals['total_invested']  or decimal.Decimal('0')
-    total_portfolio  = global_totals['total_portfolio'] or decimal.Decimal('0')
-    net_worth        = global_income - global_expenses + total_portfolio
-
-    # rest of the view stays the same...
