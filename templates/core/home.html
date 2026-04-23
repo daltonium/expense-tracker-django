@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OkaneTrack</title>
+</head>
+<body>
+
+    <h1>Welcome to OkaneTrack</h1>
+
+    {% if request.user.is_authenticated %}
+        <p>Hello, {{ request.user.username }}! Your financial dashboard is coming soon.</p>
+    {% else %}
+        <p>Track your money, grow your wealth.</p>
+        <a href="#">Login</a> | <a href="#">Register</a>
+    {% endif %}
+
+</body>
+</html>
