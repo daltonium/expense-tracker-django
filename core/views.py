@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .models import Workspace, Expense
+from .forms import ExpenseForm
 
 def register(request):
     if request.method == 'POST':
@@ -75,24 +76,17 @@ def expense_create(request, workspace_id):
     workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
 
     if request.method == 'POST':
-        title = request.POST.get('title')
-        amount = request.POST.get('amount')
-        category = request.POST.get('category')
-        date = request.POST.get('date')
-        note = request.POST.get('note', '')
-
-        Expense.objects.create(
-            workspace=workspace,
-            title=title,
-            amount=amount,
-            category=category,
-            date=date,
-            note=note,
-        )
-        return redirect('expense_list', workspace_id=workspace.id)
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.workspace = workspace
+            expense.save()
+            return redirect('expense_list', workspace_id=workspace.id)
+    else:
+        form = ExpenseForm()
 
     return render(request, 'core/expense_create.html', {
         'workspace': workspace,
-        'categories': Expense.CATEGORY_CHOICES,
+        'form': form,
     })
     
