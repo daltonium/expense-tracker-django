@@ -2,8 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, Count, Avg
+from django.utils import timezone
 from .models import Workspace, Expense
 from .forms import ExpenseForm
+import datetime
 
 def register(request):
     if request.method == 'POST':
@@ -41,7 +44,11 @@ def home(request):
 
 @login_required
 def home(request):
-    workspaces = Workspace.objects.filter(user=request.user)
+    workspaces = Workspace.objects.filter(
+        user=request.user
+    ).annotate(
+        total_spent=Sum('expense__amount')
+    )
     return render(request, 'core/home.html', {'workspaces': workspaces})
 
 @login_required
@@ -90,3 +97,41 @@ def expense_create(request, workspace_id):
         'form': form,
     })
     
+@login_required
+def analytics(request, workspace_id):
+    workspace = get_object_or_404(Workspace, id=workspace_id, user=request.user)
+
+    # --- Total spending all time ---
+    total_all_time = Expense.objects.filter(
+        workspace=workspace
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    # --- This month's spending ---
+    today = datetime.date.today()
+    total_this_month = Expense.objects.filter(
+        workspace=workspace,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    # --- Spending by category ---
+    by_category = Expense.objects.filter(
+        workspace=workspace
+    ).values('category').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+
+    # --- Monthly totals (last 6 months) ---
+    monthly_totals = Expense.objects.filter(
+        workspace=workspace
+    ).values('date__year', 'date__month').annotate(
+        total=Sum('amount')
+    ).order_by('date__year', 'date__month')
+
+    return render(request, 'core/analytics.html', {
+        'workspace': workspace,
+        'total_all_time': total_all_time,
+        'total_this_month': total_this_month,
+        'by_category': by_category,
+        'monthly_totals': monthly_totals,
+    })

@@ -9,4 +9,5 @@ urlpatterns = [
     path('select-mode/', views.select_mode, name='select_mode'),
     path('workspace/<int:workspace_id>/expenses/', views.expense_list, name='expense_list'),
     path('workspace/<int:workspace_id>/expenses/add/', views.expense_create, name='expense_create'),
+    path('workspace/<int:workspace_id>/analytics/', views.analytics, name='analytics'),
 ]
