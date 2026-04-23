@@ -173,9 +173,9 @@ def strategy(request, workspace_id):
     ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
 
     # 50/30/20 allocations based on actual income
-    needs_target    = monthly_income * (budget_rule.needs_percent   / 100)
-    wants_target    = monthly_income * (budget_rule.wants_percent   / 100)
-    savings_target  = monthly_income * (budget_rule.savings_percent / 100)
+    needs_target   = monthly_income * (budget_rule.needs_percent / decimal.Decimal(100))
+    wants_target   = monthly_income * (budget_rule.wants_percent / decimal.Decimal(100))
+    savings_target = monthly_income * (budget_rule.savings_percent / decimal.Decimal(100))
 
     # Burn rate: what % of income is being spent
     burn_rate = (
