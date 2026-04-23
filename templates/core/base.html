@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-mode="{{ workspace.mode|default:'personal' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}OkaneTrack{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="app-layout">
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <a href="{% url 'dashboard' %}" class="topbar-logo">okane<span>track</span></a>
+
+        {% if workspace %}
+        <span class="badge badge-purple">{{ workspace.name }}</span>
+        {% endif %}
+
+        <div class="topbar-spacer"></div>
+
+        {% if user.is_authenticated %}
+        <span class="topbar-user">{{ user.username }}</span>
+        <a href="{% url 'logout' %}" class="topbar-logout">Logout</a>
+        {% endif %}
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        {% if workspace %}
+        <div class="sidebar-section">Workspace</div>
+        <a href="{% url 'expense_list' workspace.id %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'expense_list' %}active{% endif %}">
+            💸 Expenses
+        </a>
+        <a href="{% url 'income_create' workspace.id %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'income_create' %}active{% endif %}">
+            💰 Add Income
+        </a>
+        <a href="{% url 'grow' workspace.id %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'grow' %}active{% endif %}">
+            📈 Grow
+        </a>
+        <a href="{% url 'analytics' workspace.id %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+            📊 Analytics
+        </a>
+        <a href="{% url 'strategy' workspace.id %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'strategy' %}active{% endif %}">
+            🎯 Strategy
+        </a>
+        <a href="{% url 'chatbot' workspace.id %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'chatbot' %}active{% endif %}">
+            🤖 AI Advisor
+        </a>
+
+        <div class="sidebar-section" style="margin-top:16px;">Account</div>
+        {% endif %}
+
+        <a href="{% url 'dashboard' %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            🏠 Dashboard
+        </a>
+        <a href="{% url 'select_mode' %}" class="sidebar-link">
+            ＋ New Workspace
+        </a>
+
+    </aside>
+
+    <!-- Page Content -->
+    <main class="main-content">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+</div>
+
+<script src="{% static 'core/js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

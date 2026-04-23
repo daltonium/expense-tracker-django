@@ -1,4 +1,57 @@
-<!DOCTYPE html><html><body>
-{% for e in expenses %}<p>{{ e.title }}</p>{% endfor %}
-<p>Total: {{ total }}</p>
-</body></html>
+{% extends 'core/base.html' %}
+{% block title %}Expenses – {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+        <h1 class="page-title">Expenses</h1>
+        <p class="page-subtitle">{{ workspace.name }}</p>
+    </div>
+    <a href="{% url 'expense_create' workspace.id %}" class="btn btn-primary">＋ Add Expense</a>
+</div>
+
+<div class="kpi-grid" style="margin-bottom:24px;">
+    <div class="kpi-card">
+        <div class="kpi-label">Total Spent</div>
+        <div class="kpi-value negative">₹{{ total|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Transactions</div>
+        <div class="kpi-value">{{ expenses.count }}</div>
+    </div>
+</div>
+
+{% if expenses %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td style="font-weight:500;">{{ expense.title }}</td>
+                <td><span class="badge badge-muted">{{ expense.category }}</span></td>
+                <td style="color:var(--danger); font-weight:600;">₹{{ expense.amount|floatformat:2 }}</td>
+                <td style="color:var(--text-muted);">{{ expense.date }}</td>
+                <td style="color:var(--text-muted); font-size:0.85rem;">{{ expense.note|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No expenses yet</h3>
+    <p>Start tracking your spending</p>
+    <a href="{% url 'expense_create' workspace.id %}" class="btn btn-primary">＋ Add Expense</a>
+</div>
+{% endif %}
+
+{% endblock %}

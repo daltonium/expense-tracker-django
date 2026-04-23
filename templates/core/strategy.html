@@ -1,4 +1,100 @@
-<!DOCTYPE html><html><body>
-<form method="post">{% csrf_token %}{{ form.as_p }}
-<button type="submit">Save</button>
-</form></body></html>
+{% extends 'core/base.html' %}
+{% block title %}Strategy – {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Strategy</h1>
+    <p class="page-subtitle">50/30/20 Budget Rule</p>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">Monthly Income</div>
+        <div class="kpi-value positive">₹{{ monthly_income|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Monthly Expenses</div>
+        <div class="kpi-value negative">₹{{ monthly_expenses|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Burn Rate</div>
+        <div class="kpi-value {% if burn_rate > 80 %}negative{% else %}accent{% endif %}">
+            {{ burn_rate|floatformat:1 }}%
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Savings</div>
+        <div class="kpi-value {% if savings_actual >= 0 %}positive{% else %}negative{% endif %}">
+            ₹{{ savings_actual|floatformat:0 }}
+        </div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <div class="card">
+        <div style="font-weight:600; margin-bottom:20px;">Allocation Targets</div>
+        {% for label, target, color in allocations %}
+        <div style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-size:0.85rem; color:var(--text-muted);">{{ label }}</span>
+                <span style="font-weight:600;">₹{{ target|floatformat:0 }}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ budget_rule.needs_percent }}%; background:{{ color }};"></div>
+            </div>
+        </div>
+        {% endfor %}
+        <div style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-size:0.85rem; color:var(--text-muted);">Needs ({{ budget_rule.needs_percent }}%)</span>
+                <span style="font-weight:600;">₹{{ needs_target|floatformat:0 }}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ budget_rule.needs_percent }}%;"></div>
+            </div>
+        </div>
+        <div style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-size:0.85rem; color:var(--text-muted);">Wants ({{ budget_rule.wants_percent }}%)</span>
+                <span style="font-weight:600;">₹{{ wants_target|floatformat:0 }}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ budget_rule.wants_percent }}%; background:var(--c2);"></div>
+            </div>
+        </div>
+        <div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-size:0.85rem; color:var(--text-muted);">Savings ({{ budget_rule.savings_percent }}%)</span>
+                <span style="font-weight:600;">₹{{ savings_target|floatformat:0 }}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ budget_rule.savings_percent }}%; background:var(--success);"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="font-weight:600; margin-bottom:20px;">Adjust Your Rule</div>
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+            <div class="alert alert-error">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-grid" style="grid-template-columns:1fr;">
+                {% for field in form %}
+                <div class="form-group">
+                    <label>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Update Rule</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

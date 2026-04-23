@@ -21,19 +21,19 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('home')
+            return redirect('select_mode')  # ← new users should create a workspace first
     else:
         form = UserCreationForm()
     return render(request, 'core/register.html', {'form': form})
 
 def user_login(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
+        username = request.POST.get('username')
+        password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
-        if user is not None:
+        if user:
             login(request, user)
-            return redirect('home')
+            return redirect('dashboard')   # ← change 'home' to 'dashboard'
         else:
             return render(request, 'core/login.html', {'error': 'Invalid credentials'})
     return render(request, 'core/login.html', {})
@@ -224,27 +224,30 @@ def income_create(request, workspace_id):
 def dashboard(request):
     today = datetime.date.today()
 
-    # All workspaces for this user, with aggregated totals
     workspaces = Workspace.objects.filter(
         user=request.user
     ).annotate(
         total_expenses=Sum('expense__amount'),
         total_income=Sum('income__amount'),
+        total_invested=Sum('investment__amount_invested'),
+        total_portfolio=Sum('investment__current_value'),
     )
 
-    # Global totals across ALL workspaces
     global_totals = Workspace.objects.filter(
         user=request.user
     ).aggregate(
         total_expenses=Sum('expense__amount'),
         total_income=Sum('income__amount'),
+        total_invested=Sum('investment__amount_invested'),
+        total_portfolio=Sum('investment__current_value'),
     )
 
-    global_expenses = global_totals['total_expenses'] or decimal.Decimal('0')
-    global_income   = global_totals['total_income']   or decimal.Decimal('0')
-    net_worth       = global_income - global_expenses
+    global_expenses = global_totals['total_expenses']  or decimal.Decimal('0')
+    global_income   = global_totals['total_income']    or decimal.Decimal('0')
+    total_invested  = global_totals['total_invested']  or decimal.Decimal('0')
+    total_portfolio = global_totals['total_portfolio'] or decimal.Decimal('0')
+    net_worth       = global_income - global_expenses + total_portfolio
 
-    # This month across all workspaces
     monthly_expenses = Expense.objects.filter(
         workspace__user=request.user,
         date__year=today.year,
@@ -257,15 +260,15 @@ def dashboard(request):
         date__month=today.month,
     ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
 
-    return render(request, 'core/dashboard.html', {
+    return render(request, 'core/dashboard.html', {   # ← must always be reached
         'workspaces': workspaces,
         'net_worth': net_worth,
         'global_expenses': global_expenses,
         'global_income': global_income,
         'monthly_expenses': monthly_expenses,
         'monthly_income': monthly_income,
+        'total_portfolio': total_portfolio,
     })
-    
 
 @login_required
 def chatbot(request, workspace_id):

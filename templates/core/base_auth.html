@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}OkaneTrack{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .auth-box {
+            width: 100%;
+            max-width: 420px;
+        }
+        .auth-logo {
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--c1);
+            margin-bottom: 32px;
+            letter-spacing: -0.5px;
+        }
+        .auth-logo span { color: var(--text); }
+        .auth-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .auth-footer a { color: var(--c1); text-decoration: none; }
+        .auth-footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-box">
+        <div class="auth-logo">okane<span>track</span></div>
+        {% block content %}{% endblock %}
+    </div>
+</div>
+</body>
+</html>

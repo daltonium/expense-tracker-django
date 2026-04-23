@@ -1,19 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>OkaneTrack</title>
-</head>
-<body>
-    <h1>Welcome to OkaneTrack</h1>
+{% extends 'core/base_auth.html' %}
+{% block title %}OkaneTrack – Smart Finance Tracking{% endblock %}
 
-    {% if request.user.is_authenticated %}
-        <p>Hello, {{ request.user.username }}!</p>
-        <a href="{% url 'logout' %}">Logout</a>
-    {% else %}
-        <p>Track your money, grow your wealth.</p>
-        <a href="{% url 'login' %}">Login</a> |
-        <a href="{% url 'register' %}">Register</a>
-    {% endif %}
-</body>
-</html>
+{% block content %}
+<div class="card" style="text-align:center; padding:48px 32px;">
+    <div style="font-size:2.5rem; margin-bottom:16px;">💴</div>
+    <h1 style="font-size:1.6rem; font-weight:700; margin-bottom:8px;">
+        Track. Grow. Thrive.
+    </h1>
+    <p style="color:var(--text-muted); margin-bottom:32px; font-size:0.95rem;">
+        Personal and company finance tracking with AI-powered insights.
+    </p>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <a href="{% url 'register' %}" class="btn btn-primary" style="justify-content:center;">
+            Get Started
+        </a>
+        <a href="{% url 'login' %}" class="btn btn-ghost" style="justify-content:center;">
+            Sign In
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,7 +1,50 @@
-<!DOCTYPE html><html><body>
-<form method="post">{% csrf_token %}
-<input name="message" placeholder="Ask something...">
-<button type="submit">Send</button>
-</form>
-{% if response_text %}<p>{{ response_text }}</p>{% endif %}
-</body></html>
+{% extends 'core/base.html' %}
+{% block title %}AI Advisor – {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">AI Advisor</h1>
+    <p class="page-subtitle">Powered by Cohere · {{ workspace.name }}</p>
+</div>
+
+<div style="max-width:720px;">
+    <div class="card" style="margin-bottom:20px;">
+        <form method="post" style="display:flex; gap:12px; align-items:flex-end;">
+            {% csrf_token %}
+            <div class="form-group" style="flex:1; margin:0;">
+                <label>Ask anything about your finances</label>
+                <input type="text" name="message"
+                    placeholder="Am I spending too much on food this month?"
+                    value="{{ user_message|default:'' }}"
+                    autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary" style="flex-shrink:0;">Ask →</button>
+        </form>
+    </div>
+
+    {% if response_text %}
+    <div class="card" style="border-left: 3px solid var(--c1);">
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">
+            AI Response
+        </div>
+        <div style="line-height:1.7; color:var(--text);">
+            {{ response_text|linebreaksbr }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-top:20px; background:var(--surface2);">
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px; font-weight:500;">
+            💡 TRY ASKING
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            {% for suggestion in "Am I saving enough this month?|Where am I overspending?|What is my burn rate?|Should I invest more?|How is my portfolio doing?"|split:"|" %}
+            <button onclick="document.querySelector('[name=message]').value='{{ suggestion }}'"
+                    class="badge badge-muted" style="cursor:pointer; border:none; padding:6px 12px;">
+                {{ suggestion }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

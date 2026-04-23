@@ -1,23 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Login – OkaneTrack</title>
-</head>
-<body>
-    <h1>Login</h1>
+{% extends 'core/base_auth.html' %}
+{% block title %}Sign In – OkaneTrack{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="font-size:1.2rem; font-weight:600; margin-bottom:24px;">Welcome back</h2>
 
     {% if error %}
-        <p style="color:red;">{{ error }}</p>
+    <div class="alert alert-error">{{ error }}</div>
     {% endif %}
 
     <form method="post">
         {% csrf_token %}
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Login</button>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="form-group">
+                <label for="id_username">Username</label>
+                <input type="text" name="username" id="id_username"
+                       placeholder="your username" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="id_password">Password</label>
+                <input type="password" name="password" id="id_password"
+                       placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="justify-content:center; margin-top:8px;">
+                Sign In
+            </button>
+        </div>
     </form>
+</div>
 
-    <p>No account? <a href="{% url 'register' %}">Register</a></p>
-</body>
-</html>
+<div class="auth-footer">
+    Don't have an account? <a href="{% url 'register' %}">Create one</a>
+</div>
+{% endblock %}

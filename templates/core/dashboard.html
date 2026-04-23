@@ -1,4 +1,81 @@
-<!DOCTYPE html><html><body>
-<p>Net Worth: {{ net_worth }}</p>
-{% for w in workspaces %}<p>{{ w.name }}</p>{% endfor %}
-</body></html>
+{% extends 'core/base.html' %}
+{% block title %}Dashboard – OkaneTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Your complete financial picture</p>
+</div>
+
+<!-- Global KPIs -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">Net Worth</div>
+        <div class="kpi-value accent">₹{{ net_worth|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Total Income</div>
+        <div class="kpi-value positive">₹{{ global_income|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Total Expenses</div>
+        <div class="kpi-value negative">₹{{ global_expenses|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">This Month Spent</div>
+        <div class="kpi-value">₹{{ monthly_expenses|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">This Month Income</div>
+        <div class="kpi-value positive">₹{{ monthly_income|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Portfolio Value</div>
+        <div class="kpi-value accent">₹{{ total_portfolio|floatformat:0 }}</div>
+    </div>
+</div>
+
+<!-- Workspaces -->
+<h2 style="font-size:1rem; color:var(--text-muted); margin-bottom:16px; font-weight:500;">
+    YOUR WORKSPACES
+</h2>
+
+{% if workspaces %}
+<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:16px;">
+    {% for ws in workspaces %}
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+            <div>
+                <div style="font-weight:600; margin-bottom:4px;">{{ ws.name }}</div>
+                <span class="badge {% if ws.mode == 'personal' %}badge-purple{% else %}badge-muted{% endif %}">
+                    {{ ws.mode }}
+                </span>
+            </div>
+            <a href="{% url 'expense_list' ws.id %}" class="btn btn-ghost btn-sm">Open →</a>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+                <div class="kpi-label">Expenses</div>
+                <div style="font-weight:600; color:var(--danger);">
+                    ₹{{ ws.total_expenses|default:0|floatformat:0 }}
+                </div>
+            </div>
+            <div>
+                <div class="kpi-label">Income</div>
+                <div style="font-weight:600; color:var(--success);">
+                    ₹{{ ws.total_income|default:0|floatformat:0 }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No workspaces yet</h3>
+    <p>Create your first workspace to start tracking</p>
+    <a href="{% url 'select_mode' %}" class="btn btn-primary">＋ Create Workspace</a>
+</div>
+{% endif %}
+
+{% endblock %}

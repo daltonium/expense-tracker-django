@@ -1,4 +1,75 @@
-<!DOCTYPE html><html><body>
-<form method="post">{% csrf_token %}
-<input name="name"><input name="mode"><button type="submit">Create</button>
-</form></body></html>
+{% extends 'core/base_auth.html' %}
+{% block title %}Choose Workspace – OkaneTrack{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:20px;">
+    <h2 style="font-size:1.2rem; font-weight:600; margin-bottom:8px;">
+        Create a Workspace
+    </h2>
+    <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom:24px;">
+        Personal mode tracks your finances. Company mode is built for business cash flow.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="form-group">
+                <label for="id_name">Workspace Name</label>
+                <input type="text" name="name" id="id_name"
+                       placeholder="e.g. My Finances, Startup Budget">
+            </div>
+
+            <div class="form-group">
+                <label>Mode</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
+                    <label style="cursor:pointer;">
+                        <input type="radio" name="mode" value="personal" checked style="display:none;" class="mode-radio">
+                        <div class="mode-card" data-mode="personal"
+                             style="border:2px solid var(--c1); border-radius:var(--radius-sm); padding:16px; text-align:center; background:rgba(124,58,237,0.08);">
+                            <div style="font-size:1.5rem; margin-bottom:6px;">👤</div>
+                            <div style="font-weight:600; font-size:0.9rem;">Personal</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                                Salary, expenses, savings
+                            </div>
+                        </div>
+                    </label>
+                    <label style="cursor:pointer;">
+                        <input type="radio" name="mode" value="company" style="display:none;" class="mode-radio">
+                        <div class="mode-card" data-mode="company"
+                             style="border:2px solid var(--border); border-radius:var(--radius-sm); padding:16px; text-align:center;">
+                            <div style="font-size:1.5rem; margin-bottom:6px;">🏢</div>
+                            <div style="font-weight:600; font-size:0.9rem;">Company</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                                Revenue, costs, burn rate
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="justify-content:center; margin-top:4px;">
+                Create Workspace →
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="auth-footer">
+    <a href="{% url 'dashboard' %}">← Back to Dashboard</a>
+</div>
+
+<script>
+// Visual toggle for mode selection cards
+document.querySelectorAll('.mode-radio').forEach(radio => {
+    radio.addEventListener('change', () => {
+        document.querySelectorAll('.mode-card').forEach(card => {
+            card.style.border = '2px solid var(--border)';
+            card.style.background = 'transparent';
+        });
+        const selected = radio.nextElementSibling;
+        selected.style.border = '2px solid var(--c1)';
+        selected.style.background = 'rgba(124,58,237,0.08)';
+    });
+});
+</script>
+{% endblock %}

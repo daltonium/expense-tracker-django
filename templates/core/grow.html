@@ -1,7 +1,84 @@
-<!-- grow.html -->
-<!DOCTYPE html><html><body>
-<p>Invested: {{ total_invested }}</p>
-<p>Current: {{ total_current }}</p>
-<p>Returns: {{ total_returns }}</p>
-{% for inv in investments %}<p>{{ inv.name }} – {{ inv.returns }}</p>{% endfor %}
-</body></html>
+{% extends 'core/base.html' %}
+{% block title %}Grow – {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+        <h1 class="page-title">Grow</h1>
+        <p class="page-subtitle">Investment Portfolio</p>
+    </div>
+    <a href="{% url 'investment_create' workspace.id %}" class="btn btn-primary">＋ Add Investment</a>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">Total Invested</div>
+        <div class="kpi-value">₹{{ total_invested|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Current Value</div>
+        <div class="kpi-value accent">₹{{ total_current|floatformat:0 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Total Returns</div>
+        <div class="kpi-value {% if total_returns >= 0 %}positive{% else %}negative{% endif %}">
+            ₹{{ total_returns|floatformat:0 }}
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Portfolio Return</div>
+        <div class="kpi-value {% if portfolio_return_pct >= 0 %}positive{% else %}negative{% endif %}">
+            {{ portfolio_return_pct|floatformat:2 }}%
+        </div>
+    </div>
+</div>
+
+{% if investments %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Invested</th>
+                <th>Current</th>
+                <th>Returns</th>
+                <th>Return %</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in investments %}
+            <tr>
+                <td style="font-weight:500;">{{ inv.name }}</td>
+                <td><span class="badge badge-muted">{{ inv.asset_type }}</span></td>
+                <td>₹{{ inv.amount_invested|floatformat:0 }}</td>
+                <td style="font-weight:600;">₹{{ inv.current_value|floatformat:0 }}</td>
+                <td style="color:{% if inv.is_profitable %}var(--success){% else %}var(--danger){% endif %}; font-weight:600;">
+                    ₹{{ inv.returns|floatformat:0 }}
+                </td>
+                <td style="color:{% if inv.is_profitable %}var(--success){% else %}var(--danger){% endif %};">
+                    {{ inv.returns_percent|floatformat:2 }}%
+                </td>
+                <td>
+                    <span class="badge {% if inv.status == 'active' %}badge-green{% else %}badge-muted{% endif %}">
+                        {{ inv.status }}
+                    </span>
+                </td>
+                <td>
+                    <a href="{% url 'investment_update' workspace.id inv.id %}" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No investments yet</h3>
+    <p>Start tracking your portfolio</p>
+    <a href="{% url 'investment_create' workspace.id %}" class="btn btn-primary">＋ Add Investment</a>
+</div>
+{% endif %}
+{% endblock %}
