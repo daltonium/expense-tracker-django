@@ -37,6 +37,8 @@ def user_logout(request):
     return redirect('login')
 
 def home(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
     return render(request, 'core/home.html', {})
 
 @login_required
@@ -210,4 +212,50 @@ def income_create(request, workspace_id):
     return render(request, 'core/income_create.html', {
         'workspace': workspace,
         'form': form,
+    })
+    
+@login_required
+def dashboard(request):
+    today = datetime.date.today()
+
+    # All workspaces for this user, with aggregated totals
+    workspaces = Workspace.objects.filter(
+        user=request.user
+    ).annotate(
+        total_expenses=Sum('expense__amount'),
+        total_income=Sum('income__amount'),
+    )
+
+    # Global totals across ALL workspaces
+    global_totals = Workspace.objects.filter(
+        user=request.user
+    ).aggregate(
+        total_expenses=Sum('expense__amount'),
+        total_income=Sum('income__amount'),
+    )
+
+    global_expenses = global_totals['total_expenses'] or decimal.Decimal('0')
+    global_income   = global_totals['total_income']   or decimal.Decimal('0')
+    net_worth       = global_income - global_expenses
+
+    # This month across all workspaces
+    monthly_expenses = Expense.objects.filter(
+        workspace__user=request.user,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    monthly_income = Income.objects.filter(
+        workspace__user=request.user,
+        date__year=today.year,
+        date__month=today.month,
+    ).aggregate(total=Sum('amount'))['total'] or decimal.Decimal('0')
+
+    return render(request, 'core/dashboard.html', {
+        'workspaces': workspaces,
+        'net_worth': net_worth,
+        'global_expenses': global_expenses,
+        'global_income': global_income,
+        'monthly_expenses': monthly_expenses,
+        'monthly_income': monthly_income,
     })
