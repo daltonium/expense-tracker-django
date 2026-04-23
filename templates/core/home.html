@@ -5,15 +5,15 @@
     <title>OkaneTrack</title>
 </head>
 <body>
-
     <h1>Welcome to OkaneTrack</h1>
 
     {% if request.user.is_authenticated %}
-        <p>Hello, {{ request.user.username }}! Your financial dashboard is coming soon.</p>
+        <p>Hello, {{ request.user.username }}!</p>
+        <a href="{% url 'logout' %}">Logout</a>
     {% else %}
         <p>Track your money, grow your wealth.</p>
-        <a href="#">Login</a> | <a href="#">Register</a>
+        <a href="{% url 'login' %}">Login</a> |
+        <a href="{% url 'register' %}">Register</a>
     {% endif %}
-
 </body>
 </html>
