@@ -13,28 +13,29 @@ body {
 
 /* ── Color Tokens ── */
 :root {
-    --c1: #7C3AED;
-    --c2: #A78BFA;
-    --c3: #EDE9FE;
-    --bg: #0F0F13;
-    --surface: #1A1A24;
-    --surface2: #22222F;
-    --border: #2E2E3D;
-    --text: #E8E8F0;
-    --text-muted: #8888A0;
+    --c1: #1243B2;          /* Royal Blue — buttons, active links, accent */
+    --c2: #1A55D4;          /* Slightly brighter blue — hover states */
+    --c3: #D6E6F5;          /* Pale blue — subtle highlights */
+
+    --bg: #070F23;          /* Near-black navy — main background */
+    --surface: #0D1B3E;     /* Dark navy — sidebar, cards */
+    --surface2: #122050;    /* Lifted navy — table headers, hover */
+    --border: #1A3070;      /* Blue-tinted border */
+    --text: #A9CDE5;        /* Powder blue — primary text */
+    --text-muted: #5F8BAA;  /* Muted steel blue — secondary text */
+
     --success: #22C55E;
     --danger: #EF4444;
     --warning: #F59E0B;
     --radius: 12px;
     --radius-sm: 8px;
-    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
 }
 
-/* Company mode overrides c1/c2/c3 only */
 [data-mode="company"] {
-    --c1: #0EA5E9;
-    --c2: #38BDF8;
-    --c3: #E0F2FE;
+    --c1: #1243B2;
+    --c2: #1A55D4;
+    --c3: #D6E6F5;
 }
 
 /* ── Layout ── */
@@ -252,7 +253,7 @@ tr:hover td { background: var(--surface2); }
 
 .badge-green  { background: rgba(34,197,94,0.15);  color: var(--success); }
 .badge-red    { background: rgba(239,68,68,0.15);   color: var(--danger); }
-.badge-purple { background: rgba(124,58,237,0.15);  color: var(--c1); }
+.badge-purple { background: rgba(18,67,178,0.2); color: var(--c1); }; }
 .badge-muted  { background: var(--surface2);        color: var(--text-muted); }
 
 /* ── Buttons ── */
