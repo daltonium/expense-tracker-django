@@ -452,7 +452,7 @@ User's question: {user_message}
             try:
                 co     = cohere.ClientV2(api_key=settings.COHERE_API_KEY)
                 result = co.chat(
-                    model='command-r-plus',
+                    model='command-r7b-12-2024',
                     messages=[
                         {'role': 'system', 'content': persona},
                         {'role': 'user',   'content': financial_context},
